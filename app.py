@@ -1,4 +1,4 @@
-import os, time, json
+import os, time, json, requests
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,8 +12,10 @@ TWITTER_LOGIN_URL = f"{TWITTER_BASE_URL}/i/flow/login"
 TWITTER_PROFILE_URL = lambda uname: f"{TWITTER_BASE_URL}/{uname}"
 TWITTER_FOLLOWERS_URL = lambda uname: f"{TWITTER_BASE_URL}/{uname}/followers"
 IS_LOGGED_IN = False
-USERS = []
+# USERS = []
+USERS = ["@ASNandanunni", "@AbhinavRajesh"]
 TWEETS = {}
+RESULTS = {}
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -113,15 +115,53 @@ def WriteToJSONFile():
         err_logger(err, "WriteToJSONFile")
 
 
+def PredictWithModel():
+    global USERS, TWEETS, RESULTS
+    count = 0
+    for username in USERS:
+        username = username.replace("@", "")
+        try:
+            url = "http://127.0.0.1:5000/predict"
+            tweets = TWEETS[username]
+            data = {"tweets": tweets}
+            response = requests.post(url, json=data)
+            response_data = json.loads(response.text)
+            print(response_data)
+            if response_data["success"]:
+                RESULTS[username] = response_data["data"]
+            else:
+                statuses = []
+                for tweet in tweets:
+                    statuses.append(True if "depress" in tweet else False)
+                data = {"is_depressed": True if any(statuses) else False}
+                RESULTS[username] = data
+            count += 1
+            msg_logger(f"[{count}/{len(USERS)}] {username} success", "PredictWithModel")
+
+        except Exception as err:
+            count += 1
+            msg_logger(f"[{count}/{len(USERS)}] {username} failed", "PredictWithModel")
+            err_logger(err, "PredictWithModel")
+
+
+def DisplayResults():
+    print("\n\n------------------ RESULTS ------------------\n")
+    for username in RESULTS.keys():
+        print(username, " =>", RESULTS[username])
+        print("____________________________________________\n")
+
+
 def Main():
     options = Options()
     options.headless = True
     driver = webdriver.Chrome(options=options)
     try:
-        Login(driver=driver)
-        GetFollowers(driver=driver)
+        # Login(driver=driver)
+        # GetFollowers(driver=driver)
         GetTweets(driver=driver)
         WriteToJSONFile()
+        PredictWithModel()
+        DisplayResults()
     except KeyboardInterrupt:
         msg_logger("Halting process", "Main")
         driver.quit()
