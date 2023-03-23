@@ -12,8 +12,8 @@ TWITTER_LOGIN_URL = f"{TWITTER_BASE_URL}/i/flow/login"
 TWITTER_PROFILE_URL = lambda uname: f"{TWITTER_BASE_URL}/{uname}"
 TWITTER_FOLLOWERS_URL = lambda uname: f"{TWITTER_BASE_URL}/{uname}/followers"
 IS_LOGGED_IN = False
-# USERS = []
-USERS = ["@ASNandanunni", "@AbhinavRajesh"]
+USERS = []
+# USERS = ["@ASNandanunni", "@AbhinavRajesh"]
 TWEETS = {}
 RESULTS = {}
 
@@ -104,17 +104,6 @@ def GetTweets(driver: webdriver.Chrome):
         err_logger(err, "GetTweets")
 
 
-def WriteToJSONFile():
-    global USERS, TWEETS
-    try:
-        json_object = json.dumps(TWEETS, indent=4)
-        with open("tweets.json", "w") as outfile:
-            outfile.write(json_object)
-        msg_logger(f"Data saved to JSON file", "WriteToJSONFile")
-    except Exception as err:
-        err_logger(err, "WriteToJSONFile")
-
-
 def PredictWithModel():
     global USERS, TWEETS, RESULTS
     count = 0
@@ -144,6 +133,17 @@ def PredictWithModel():
             err_logger(err, "PredictWithModel")
 
 
+def WriteToJSONFile(data, filename):
+    global USERS, TWEETS
+    try:
+        json_object = json.dumps(data, indent=4)
+        with open(f"{filename}.json", "w") as outfile:
+            outfile.write(json_object)
+        msg_logger(f"Data saved to JSON file", "WriteToJSONFile")
+    except Exception as err:
+        err_logger(err, "WriteToJSONFile")
+
+
 def DisplayResults():
     print("\n\n------------------ RESULTS ------------------\n")
     for username in RESULTS.keys():
@@ -156,12 +156,13 @@ def Main():
     options.headless = True
     driver = webdriver.Chrome(options=options)
     try:
-        # Login(driver=driver)
-        # GetFollowers(driver=driver)
+        Login(driver=driver)
+        GetFollowers(driver=driver)
         GetTweets(driver=driver)
-        WriteToJSONFile()
         PredictWithModel()
         DisplayResults()
+        WriteToJSONFile(TWEETS, "tweets")
+        WriteToJSONFile(RESULTS, "results")
     except KeyboardInterrupt:
         msg_logger("Halting process", "Main")
         driver.quit()
